@@ -1,0 +1,9 @@
+#скрытие ключей, бд и логов
+.env
+satisfaction.db
+bot.log
+
+# Скрываем кэши и окружения
+__pycache__/
+venv/
+.vscode/
