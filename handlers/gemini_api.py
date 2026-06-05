@@ -1,6 +1,5 @@
 import logging
 import asyncio
-import base64
 from google import genai
 from google.genai import types
 from config import GEMINI_TOKEN
