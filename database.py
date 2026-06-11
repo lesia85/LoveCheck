@@ -52,8 +52,8 @@ async def save_or_update_user(user_id: int, data: dict):
 
     :user_id: Telegram ID пользователя
     :data: словарь с полями для обновления/вставки.
-                 Допустимые ключи: is_consented, state, satisfaction_result,
-                 ideal_traits, ideal_appearance.
+                 Допустимые ключи: is_consented, state,
+                 satisfaction_result, ideal_traits.
     """
     try:
         async with aiosqlite.connect(DATABASE_NAME) as db:
@@ -131,8 +131,7 @@ async def get_user_data(user_id: int) -> dict | None:
                         'is_consented': bool(row[0]),
                         'state': row[1],
                         'satisfaction_result': row[2],
-                        'ideal_traits': row[3],
-                        'ideal_appearance': row[4]
+                        'ideal_traits': row[3]
                     }
                 return None
     except Exception as e:
@@ -159,7 +158,10 @@ async def get_chat_history(user_id: int, limit: int = 50) -> list[dict]:
                 LIMIT ?
             ''', (user_id, limit)) as cursor:
                 rows = await cursor.fetchall()
-                return [{'role': row[0], 'message_text': row[1], 'timestamp': row[2]} for row in rows]
+                return [{'role': row[0], 
+                         'message_text': row[1], 
+                         'timestamp': row[2]} 
+                         for row in rows]
     except Exception as e:
         logging.error(f"Ошибка при получении истории диалога пользователя {user_id}: {e}")
         return []

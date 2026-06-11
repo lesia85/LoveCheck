@@ -1,0 +1,58 @@
+import logging
+from aiogram import Router, F
+from aiogram.types import Message
+from aiogram.fsm.context import FSMContext
+from aiogram.filters import StateFilter
+
+from database import get_user_data
+from states import UserStates
+from keyboards.reply import main_menu_board
+
+router = Router()
+
+
+async def get_user_results(user_id: int) -> str:
+    """
+    Получает результаты из бд и формирует сообщение с цитатой (чтобы свернуть текст).
+    """
+    user_data = await get_user_data(user_id)
+
+    if not user_data:
+        return (
+            "У вас пока нет сохраненных результатов.\n"
+            "Пройдите опросы \"Удовлетворенность отношениями\" или \"Идеальный партнер\"."
+        )
+
+    satisfaction = user_data.get('satisfaction_result')
+    ideal = user_data.get('ideal_traits')
+
+    text = "Вы прошли следующие опросы:\n"
+
+    if satisfaction and ideal:
+        # Оба результата есть
+        text += (
+            "\n<b>Удовлетворенность отношениями и Идеальный партнер</b>\n\n"
+            "<b>Удовлетворенность отношениями:</b>\n"
+            f"<blockquote expandable>{satisfaction}</blockquote>\n\n"
+            "<b>Идеальный партнер:</b>\n"
+            f"<blockquote expandable>{ideal}</blockquote>"
+        )
+    elif satisfaction:
+        # Только удовлетворенность
+        text += (
+            "\n<b>Удовлетворенность отношениями</b>\n"
+            f"<blockquote expandable>{satisfaction}</blockquote>"
+        )
+    elif ideal:
+        # Только идеальный партнер
+        text += (
+            "\n<b>Идеальный партнер</b>\n"
+            f"<blockquote expandable>{ideal}</blockquote>"
+        )
+    else:
+        text = (
+            "У вас пока нет сохраненных результатов опросов.\n"
+            "Пройдите хотя бы один опрос."
+        )
+
+    return text

@@ -6,6 +6,7 @@ from handlers.callbacks import router as callbacks_router
 from handlers.main_menu import router as main_menu_router
 from handlers.satisfaction import router as satisfaction_router
 from handlers.ideal_partner import router as ideal_partner_router
+from handlers.chat_with_ai import router as chat_router
 import logging
 from database import create_db
 
@@ -41,6 +42,8 @@ async def main():
         dp.include_router(main_menu_router)
         dp.include_router(satisfaction_router)
         dp.include_router(ideal_partner_router)
+        #dp.include_router(results_router)
+        dp.include_router(chat_router)
 
         print("Бот запущен...")
         await dp.start_polling(bot)

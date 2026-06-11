@@ -3,8 +3,11 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 from database import save_or_update_user
+from handlers.all_results import get_user_results
+from handlers.chat_with_ai import start_chat_with_ai
 from states import UserStates
 from keyboards.reply import main_menu_board
+from handlers.about_project import send_about_project
 
 router = Router()
 
@@ -55,23 +58,20 @@ async def go_to_ideal_partner_survey(message: Message, state: FSMContext):
 
 @router.message(StateFilter(UserStates.main_menu), F.text == "Чат с ИИ")
 async def go_to_chat_with_ai(message: Message, state: FSMContext):
-    await message.answer("Функция «Чат с ИИ» пока в разработке.", reply_markup=main_menu_board())
-    await state.set_state(UserStates.main_menu)
+    await start_chat_with_ai(message, state)
 
 
 @router.message(StateFilter(UserStates.main_menu), F.text == "Мои результаты")
 async def go_to_my_results(message: Message, state: FSMContext):
-    await message.answer("Функция просмотра результатов пока в разработке.", reply_markup=main_menu_board())
+    """Хэндлер кнопки «Мои результаты»"""
+    result_text = await get_user_results(message.from_user.id)
+    await message.answer(result_text, parse_mode="HTML", reply_markup=main_menu_board())
     await state.set_state(UserStates.main_menu)
 
 
 @router.message(StateFilter(UserStates.main_menu), F.text == "О проекте")
-async def go_to_about_project(message: Message):
-    await message.answer(
-        "<b>О проекте</b> ℹ️\nДанный бот является научно-исследовательским инструментом...",
-        parse_mode="HTML",
-        reply_markup=main_menu_board()
-    )
+async def go_to_about_project(message: Message, state: FSMContext):
+    await send_about_project(message, state)
 
 
 @router.message(StateFilter(UserStates.main_menu))
