@@ -1,18 +1,18 @@
 from aiogram import Router
 from aiogram.types import Message, FSInputFile, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import CommandStart
 from aiogram.utils.media_group import MediaGroupBuilder
 import aiosqlite
 import logging
 import os
 from config import DATABASE_NAME
 from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
 from states import UserStates
 from keyboards.reply import main_menu_board
 
 router = Router()
 
-@router.message(CommandStart())
+@router.message(Command("start"))
 async def button_start(message: Message, state: FSMContext):
     BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     try:
@@ -90,3 +90,13 @@ async def button_start(message: Message, state: FSMContext):
     except Exception as e:
         logging.error(f"Произошла ошибка при обработке команды /start: {e}")
         await state.set_state(UserStates.error)
+
+@router.message(Command("help"))
+async def cmd_help(message: Message):
+    help_text = (
+        "Столкнулись с ошибкой?\n\n"
+        "Напишите об этом нам в форму:\n<b>https://forms.gle/HQwUZ2hYwaxmoDLU7</b>\n"
+        "Обязательно подробно объясните вашу проблему. "
+        "Мы постараемся в скором времени ее исправить"
+    )
+    await message.answer(help_text, parse_mode="HTML")

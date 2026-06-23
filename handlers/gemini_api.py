@@ -6,10 +6,10 @@ from config import GEMINI_TOKEN
 
 client = genai.Client(api_key=GEMINI_TOKEN)
 
-TEXT_MODEL = 'gemini-2.5-flash'
+TEXT_MODEL = 'gemini-3.1-flash-lite'
 
 
-async def generate_text_with_gemini(prompt: str, max_retries: int = 3) -> str:
+async def generate_text_with_gemini(prompt: str, system_instruction: str | None = None, contents: list | None = None, max_retries: int = 3) -> str:
     """
     Генерация текста через Gemini с правильной логикой повторных попыток.
     """
@@ -18,9 +18,14 @@ async def generate_text_with_gemini(prompt: str, max_retries: int = 3) -> str:
     success = False
 
     config = types.GenerateContentConfig(
-        system_instruction="Ты — полезный и эмпатичный психологический помощник.",
+        system_instruction=system_instruction or "Ты — полезный и эмпатичный психологический помощник.",
         temperature=0.7
     )
+
+    if contents is not None:
+        request_contents = contents
+    else:
+        request_contents = prompt
 
     while attempt < max_retries and not success:
         logging.info(f"Gemini Текст: Попытка {attempt + 1}/{max_retries}...")
@@ -28,7 +33,7 @@ async def generate_text_with_gemini(prompt: str, max_retries: int = 3) -> str:
         try:
             response = await client.aio.models.generate_content(
                 model=TEXT_MODEL,
-                contents=prompt,
+                contents=request_contents,
                 config=config
             )
 

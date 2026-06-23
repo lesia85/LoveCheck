@@ -1,12 +1,5 @@
-import logging
-from aiogram import Router, F
-from aiogram.types import Message
-from aiogram.fsm.context import FSMContext
-from aiogram.filters import StateFilter
-
+from aiogram import Router
 from database import get_user_data
-from states import UserStates
-from keyboards.reply import main_menu_board
 
 router = Router()
 

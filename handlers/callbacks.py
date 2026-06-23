@@ -23,7 +23,7 @@ async def process_buttons(callback: CallbackQuery, state: FSMContext):
             await save_or_update_user(user_id, {"is_consented": 1, "state": "main_menu"})
 
             await callback.message.edit_text(
-                "Спасибо! Ваши согласия были приянты, и теперь вы можете ознакомиться со всеми разделами.\nВ следующем сообщении будет полное описание разделов."
+                "Спасибо! Ваши согласия были приняты, и теперь вы можете ознакомиться со всеми разделами.\nВ следующем сообщении будет полное описание разделов."
             )
             await state.set_state(UserStates.main_menu)
             await main_menu(callback.message)# переход в главное меню

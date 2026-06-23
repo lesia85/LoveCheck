@@ -1,16 +1,29 @@
 import logging
 from aiogram import Router
-from aiogram.types import Message, ReplyKeyboardRemove
+from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 
 from database import save_or_update_user
 from handlers.gemini_api import generate_text_with_gemini
-from handlers.main_menu import main_menu
 from states import UserStates
 from keyboards.reply import get_rating_keyboard_ideal_partner, main_menu_board
 
 router = Router()
+
+
+import re
+
+def _md_bold_to_html(text: str) -> str:
+    """
+    Конвертирует **жирный текст** из Markdown в <b>HTML</b> теги.
+    Также экранирует спецсимволы HTML (<, >, &), чтобы Telegram не падал.
+    """
+    # Сначала экранируем HTML-спецсимволы
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    # Затем заменяем **текст** → <b>текст</b>
+    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text, flags=re.DOTALL)
+    return text
 
 QUESTIONS = [
     "Поддерживающий", "Заботливый", "Жизнерадостный", "Имеет высокий доход",
@@ -48,7 +61,7 @@ async def ask_next_question(message: Message, state: FSMContext):
             pass
         
         await message.answer(
-            f"{get_progress(q_index + 1)}\n\n"
+            f"<b>{get_progress(q_index + 1)}</b>\n\n"
             f"Насколько важно, чтобы идеальный партнер был:\n\n"
             f"\t{question}?",
             parse_mode="HTML",
@@ -157,7 +170,8 @@ async def finish_ideal_survey(message: Message, state: FSMContext):
         f"Совсем не важно: {', '.join(not_important_at_all)}"
         "\nПосле составления текстового описания, подбери список знаменитостей, персонажей из фильмов, "
         "сериалов и книг, которые подходят под описание идеального партнера. Избегай противоречивых, "
-        "аморальных и скандальных личностей."
+        "аморальных и скандальных личностей. Выделяй полужирынм шрифтом ТОЛЬКО имена и фамилии знаменитостей. "
+        "Не пиши про политиков или людей как-то вязанных деятельностью с политикой"
         #f"Цвет волос: {answers.get('Цвет волос')}, Цвет глаз: {answers.get('Цвет глаз')}, Этнос: {answers.get('Этническая принадлежность')}"
     )
 
@@ -173,15 +187,6 @@ async def finish_ideal_survey(message: Message, state: FSMContext):
               "Важно, чтобы люди на изображениях отображали следующие качества и характеристики. "
               "Ты можешь создавать фон, чтобы указать на очень важные и важные качества. Важно, чтобы люди стояли на полу.\n"
         )'''
-    
-    if very_important:
-        text_prompt += f"Очень важно: {', '.join(very_important)}\n"
-    if important:
-        text_prompt += f"Важно: {', '.join(very_important)}\n"
-    if not_important:
-        text_prompt += f"Не важно: {', '.join(very_important)}\n"
-    if not_important_at_all:
-        text_prompt += f"Совсем не важно: {', '.join(very_important)}\n"
 
     #img_prompt += f"\nЦвет волос: {hair}\nЦвет глаз: {eyes}\nЭтническая принадлежность: {ethnicity}"
     #text_prompt += f"\nЦвет волос: {hair}\nЦвет глаз: {eyes}\nЭтническая принадлежность: {ethnicity}"
@@ -191,14 +196,21 @@ async def finish_ideal_survey(message: Message, state: FSMContext):
     try:
         #генерация ответа
         text_desc = await generate_text_with_gemini(text_prompt)
-        await message.answer(text_desc, parse_mode="HTML")
-        # сохранение результата в бд
-        await save_or_update_user(message.from_user.id, {"ideal_traits": text_desc})
+        # Конвертируем **жирный** Markdown → <b>HTML</b>, чтобы Telegram не падал на незакрытых тегах
+        text_html = _md_bold_to_html(text_desc)
+        await message.answer(text_html, parse_mode="HTML", reply_markup=main_menu_board())
+        # сохранение результата в бд (сохраняем оригинал от Gemini)
+        await save_or_update_user(message.from_user.id, {"ideal_traits": text_html})
 
     except Exception as e:
         logging.error(f"Ошибка при завершении опроса: {e}")
-        await message.answer("Произошла ошибка при составлении описания. Попробуйте еще раз позже.")
+        await state.set_state(UserStates.main_menu)
+        await message.answer(
+            "Произошла ошибка при составлении описания. Попробуйте еще раз позже.",
+            reply_markup=main_menu_board()
+        )
+        return
 
-    await state.set_state(UserStates.main_menu)
-    await save_or_update_user(message.from_user.id, {"state": "main_menu"})
-    await message.answer("Вы вернулись в главное меню.", reply_markup=main_menu_board())
+    finally:
+        await state.set_state(UserStates.main_menu)
+        await save_or_update_user(message.from_user.id, {"state": "main_menu"})

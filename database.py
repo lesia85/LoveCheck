@@ -18,15 +18,14 @@ async def create_db():
                     is_consented BOOLEAN DEFAULT 0,
                     state TEXT,
                     satisfaction_result TEXT,
-                    ideal_traits TEXT,
-                    ideal_appearance TEXT
+                    ideal_traits TEXT
                 )
             ''')
 
             # Таблица 2: история диалога с ИИ
             await db.execute('''
                 CREATE TABLE IF NOT EXISTS chat_history (
-                    user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER PRIMARY KEY,
                     message_text TEXT,
                     role TEXT,
                     timestamp DATETIME DEFAULT (datetime('now', 'localtime')),
@@ -65,7 +64,7 @@ async def save_or_update_user(user_id: int, data: dict):
                 #Обновление существующей записи
                 update_fields = []
                 values = []
-                for key in ['is_consented', 'state', 'satisfaction_result', 'ideal_traits', 'ideal_appearance']:
+                for key in ['is_consented', 'state', 'satisfaction_result', 'ideal_traits']:
                     if key in data:
                         update_fields.append(f"{key} = ?")
                         values.append(data[key])
@@ -76,15 +75,14 @@ async def save_or_update_user(user_id: int, data: dict):
             else:
                 #Вставка новой записи
                 await db.execute('''
-                    INSERT INTO users (user_id, is_consented, state, satisfaction_result, ideal_traits, ideal_appearance)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO users (user_id, is_consented, state, satisfaction_result, ideal_traits)
+                    VALUES (?, ?, ?, ?, ?)
                 ''', (
                     user_id,
                     data.get('is_consented', 0),
                     data.get('state'),
                     data.get('satisfaction_result'),
                     data.get('ideal_traits'),
-                    data.get('ideal_appearance')
                 ))
             await db.commit()
     except Exception as e:
@@ -92,25 +90,26 @@ async def save_or_update_user(user_id: int, data: dict):
         raise
 
 
-async def add_chat_message(user_id: int, message_text: str, role: str, mark_like: int, mark_mission_complete: int):
+async def add_chat_message(user_id: int, message_text: str, role: str, 
+    mark_like: int = 0, mark_mission_complete: int = 0):
     """
-    Добавляет запись в историю диалога с ИИ.
-
-    :user_id: Telegram ID пользователя
-    :message_text: текст сообщения
-    :role: 'user' или 'ai'
-    :mark_like: оценка от 1 до 5 (понравилось ли общение)
-    :mark_mission_complete: оценка от 1 до 5 (справился ли ИИ с ролью)
+    Сохраняет или обновляет последнюю запись пользователя.
+    timestamp записывается ТОЛЬКО при первом сообщении и больше не меняется.
     """
     try:
         async with aiosqlite.connect(DATABASE_NAME) as db:
             await db.execute('''
                 INSERT INTO chat_history (user_id, message_text, role, mark_like, mark_mission_complete)
                 VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    message_text = excluded.message_text,
+                    role = excluded.role,
+                    mark_like = excluded.mark_like,
+                    mark_mission_complete = excluded.mark_mission_complete
             ''', (user_id, message_text, role, mark_like, mark_mission_complete))
             await db.commit()
     except Exception as e:
-        logging.error(f"Ошибка при добавлении действий в чате с ИИ для пользователя {user_id}: {e}")
+        logging.error(f"Ошибка при сохранении сообщения пользователя {user_id}: {e}")
         raise
 
 
@@ -122,7 +121,7 @@ async def get_user_data(user_id: int) -> dict | None:
     try:
         async with aiosqlite.connect(DATABASE_NAME) as db:
             async with db.execute('''
-                SELECT is_consented, state, satisfaction_result, ideal_traits, ideal_appearance
+                SELECT is_consented, state, satisfaction_result, ideal_traits
                 FROM users WHERE user_id = ?
             ''', (user_id,)) as cursor:
                 row = await cursor.fetchone()
@@ -139,7 +138,7 @@ async def get_user_data(user_id: int) -> dict | None:
         return None
 
 
-async def get_chat_history(user_id: int, limit: int = 50) -> list[dict]:
+async def get_chat_history(user_id: int, limit: int = 5) -> list[dict]:
     """
     Возвращает последние сообщения из истории диалога с ИИ для указанного пользователя.
     Сортировка по возрастанию времени (от старых к новым).

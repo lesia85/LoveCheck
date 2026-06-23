@@ -1,5 +1,6 @@
 import asyncio
 from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand, BotCommandScopeDefault
 from config import BOT_TOKEN
 from handlers.start import router as start_router 
 from handlers.callbacks import router as callbacks_router
@@ -34,7 +35,14 @@ async def main():
         logging.info("Инициализация базы данных...")
         await create_db()
 
-        # Подключаем роутер с командой /start и роутер обработчика inline-кнопок
+        # подключение команд и роутеров
+
+        commands = [
+            BotCommand(command="start", description="Начать работу с ботом"),
+            BotCommand(command="help", description="Помощь и поддержка"),
+        ]
+        await bot.set_my_commands(commands, scope=BotCommandScopeDefault())
+        logging.info("Команды бота успешно установлены")
 
 
         dp.include_router(start_router)

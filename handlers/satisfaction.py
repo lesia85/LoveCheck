@@ -1,17 +1,22 @@
 import logging
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 
 from database import save_or_update_user
 from handlers.gemini_api import generate_text_with_gemini
-from handlers.main_menu import main_menu
 from states import UserStates
 from keyboards.reply import get_rating_keyboard_by_5, main_menu_board
-from handlers.gigachat_api import generate_text_with_gigachat
 
 router = Router()
+
+import re
+
+def _md_bold_to_html(text: str) -> str:
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text, flags=re.DOTALL)
+    return text
 
 # опросник TLS-15
 SATISFACTION_QUESTIONS = [
@@ -24,13 +29,13 @@ SATISFACTION_QUESTIONS = [
     # страсть (6-10)
     "Наши отношения с партнером очень романтичные",
     "Я нахожу моего партнера очень привлекательным",
-    "Я не могу представить кого-то другого, с кем бы я был(а) так счастлива, как с моим партнером",
+    "Я не могу представить кого-то другого, с кем бы я был(а) так счастлив(а), как с моим партнером",
     "Есть что-то магическое в наших отношениях с партнером",
     "Мои отношения с партнером очень страстные",
     # обязательства (11-15)
     "Я уверен(а) в постоянстве моих отношений с партнером",
     "Я считаю свою преданность к партнеру очень крепкой",
-    "Я уверена в своей любви к партнеру",
+    "Я уверен(а) в своей любви к партнеру",
     "Я рассматриваю свои отношения с партнером как постоянные",
     "Я переживаю чувство ответственности по отношению к своему партнеру"
 ]
@@ -58,7 +63,7 @@ async def ask_next_question(message: Message, state: FSMContext):
             pass
 
         await message.answer(
-            f"{get_progress(q_index + 1)}\n\n"
+            f"<b>{get_progress(q_index + 1)}</b>\n\n"
             f"{question}",
             parse_mode="HTML",
             reply_markup=get_rating_keyboard_by_5()
@@ -81,7 +86,7 @@ async def process_satisfaction_rating(message: Message, state: FSMContext):
             
             # список вопросов
             answers = data.get("satisfaction_answers", [])
-            answers.append(rating)  # Добавляем оценку в конец списка
+            answers.append(rating)  # добавление оценку в конец списка
 
             # обновление вопроса
             await state.update_data(satisfaction_answers=answers, current_question=q_index + 1)
@@ -123,7 +128,7 @@ async def finish_satisfaction_survey(message: Message, state: FSMContext):
     # скрыть клавиатуру на время генерации ответа
     await message.answer(theory_text, parse_mode="HTML", reply_markup=main_menu_board())
 
-    # 4. Формируем промпт для GigaChat с подстановкой результатов
+    # промпт для Gemini с подстановкой результатов
     ai_prompt = f"""Триангулярная теория любви Стернберга рассматривает любовь, как сочетание трех компонентов: близость (интимность), страсть и обязательства (приверженность).
 Под компонентом Интимность подразумеваются чувства близости, взаимной привязанности и тесные узы между людьми, возникающие при любовных отношениях. Таким образом, этот компонент включает в себя те чувства, которые создают теплоту в «любовных отношениях».
 Под компонентом Страсть подразумевается романтическая сторона любви, физическое влечение, сексуальные отношения и связанные с ними аспекты любовных отношений. Таким образом, компонент «страсть» включает в себя мотивационные и другие источники возбуждения, которыми обусловлены страстные чувства в любовных отношениях.
@@ -165,26 +170,32 @@ async def finish_satisfaction_survey(message: Message, state: FSMContext):
 Проанализировав оценки по каждому типу любви, сделай обоснованные предположения об уровне и источниках удовлетворенности человека его текущими отношениями. Напиши только краткие итоги анализа для второго блока. Сам анализ писать не нужно."""
 
     try:
-        # вызов GigaChat
-        gigachat_response = await generate_text_with_gemini(ai_prompt)
+        # вызов Gemini
+        ai_response = await generate_text_with_gemini(ai_prompt)
 
-        # второе сообщение (Ответ от ИИ)
-        # Если GigaChat не добавит префикс "Ваш тип любви:", мы можем добавить его сами:
-        if not gigachat_response.startswith("Ваш тип любви:"):
-            final_message = f"<b>Ваш тип любви:</b> {gigachat_response}"
+        # второе сообщение (ответ от ИИ)
+        # если Gemini не добавит префикс "Ваш тип любви:", добавление строки:
+        ai_response_html = _md_bold_to_html(ai_response)
+
+        if not ai_response.startswith("Ваш тип любви:"):
+            final_message = f"<b>Ваш тип любви:</b>\n\n{ai_response_html}"
         else:
-            final_message = gigachat_response
-            
-        await message.answer(final_message, parse_mode="HTML")
+            final_message = ai_response_html
+
+        await message.answer(final_message, parse_mode="HTML", reply_markup=main_menu_board())
 
         # сохранение результатов в БД
         await save_or_update_user(message.from_user.id, {"satisfaction_result": final_message})
 
     except Exception as e:
         logging.error(f"Ошибка при завершении опроса удовлетворенности: {e}")
-        await message.answer("Произошла ошибка при обработке результатов. Попробуйте позже.")
+        await state.set_state(UserStates.main_menu)
+        await message.answer(
+            "Произошла ошибка при обработке результатов. Попробуйте позже.",
+            reply_markup=main_menu_board()
+        )
 
     # переход состояния в главное меню
-    await state.set_state(UserStates.main_menu)
-    await save_or_update_user(message.from_user.id, {"state": "main_menu"})
-    await message.answer("Вы вернулись в главное меню. Выберите следующее действие на панели меню.", reply_markup=main_menu_board())
+    finally:
+        await state.set_state(UserStates.main_menu)
+        await save_or_update_user(message.from_user.id, {"state": "main_menu"})
