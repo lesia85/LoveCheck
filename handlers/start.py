@@ -44,8 +44,8 @@ async def button_start(message: Message, state: FSMContext):
         else:
             #Отправка двух пдф файлов
             BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) # передача пути к файлу, т.к. не лежат в корне проекта
-            privacy_path = os.path.join(BASE_DIR, "Политика конфиденциальности.pdf") # privacy_policy
-            consent_path = os.path.join(BASE_DIR, "Информированное согласие на участие в эксперименте с ИИ.pdf") # consent
+            privacy_path = os.path.join(BASE_DIR, "Политика конфиденциальности.pdf")
+            consent_path = os.path.join(BASE_DIR, "Информированное согласие на участие в эксперименте с ИИ.pdf")
 
             # проверка наличия файлов
             if not os.path.exists(privacy_path):
