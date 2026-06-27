@@ -191,7 +191,7 @@ async def finish_ideal_survey(message: Message, state: FSMContext):
     #img_prompt += f"\nЦвет волос: {hair}\nЦвет глаз: {eyes}\nЭтническая принадлежность: {ethnicity}"
     #text_prompt += f"\nЦвет волос: {hair}\nЦвет глаз: {eyes}\nЭтническая принадлежность: {ethnicity}"
 
-    await message.answer("Описание вашего идеального партнера генерируется...")
+    await message.answer("Описание вашего идеального партнера генерируется... ⏳")
 
     try:
         #генерация ответа

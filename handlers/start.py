@@ -44,8 +44,8 @@ async def button_start(message: Message, state: FSMContext):
         else:
             #Отправка двух пдф файлов
             BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..")) # передача пути к файлу, т.к. не лежат в корне проекта
-            privacy_path = os.path.join(BASE_DIR, "privacy_policy.pdf")
-            consent_path = os.path.join(BASE_DIR, "consent.pdf")
+            privacy_path = os.path.join(BASE_DIR, "Политика конфиденциальности.pdf") # privacy_policy
+            consent_path = os.path.join(BASE_DIR, "Информированное согласие на участие в эксперименте с ИИ.pdf") # consent
 
             # проверка наличия файлов
             if not os.path.exists(privacy_path):
@@ -63,7 +63,7 @@ async def button_start(message: Message, state: FSMContext):
             media = MediaGroupBuilder() # группа медиафайлов (отправка файлов в 1 сообщении)
 
             media.add_document(FSInputFile(privacy_path), caption="Политика конфиденциальности") # добавление файла в группу с подписью
-            media.add_document(FSInputFile(consent_path), caption="Информированное добровольное согласие")
+            media.add_document(FSInputFile(consent_path), caption="Информированное согласие\n\nДокументы обязательные к ознакомлению")
 
             await message.answer_media_group(media.build())
             
@@ -80,8 +80,8 @@ async def button_start(message: Message, state: FSMContext):
             #Отправка сообщения 
             await message.answer(
                 "Для продолжения работы с ботом, вам нужно прочитать политику конфиденциальности " \
-                "и информированное добровольное согласие. Нажимая кнопку “Согласен”, вы подтверждаете, " \
-                "что полностью прочли документы и соглашаетесь с их условиями",
+                "и информированное согласие на участие в эксперименте. Нажимая кнопку \"Согласен\", вы подтверждаете, " \
+                "что полностью прочли ОБА документа и соглашаетесь с их условиями",
                 reply_markup = keyboard
             )
 

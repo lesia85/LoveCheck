@@ -118,7 +118,7 @@ async def start_chat_with_ai(message: Message, state: FSMContext):
     await state.set_state(UserStates.chat_with_ai)
 
     await message.answer(
-        "⚠️ <b>Внимание</b>\n\n"
+        "📌 <b>Внимание</b>\n\n"
         "Чат с твоим идеальным партнером будет доступен <b>в течение 1 часа</b> "
         "с момента первого сообщения нейросети.\n"
         "После окончания времени чат автоматически завершится.\n\n"

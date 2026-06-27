@@ -13,39 +13,39 @@ async def get_user_results(user_id: int) -> str:
     if not user_data:
         return (
             "У вас пока нет сохраненных результатов.\n"
-            "Пройдите опросы \"Удовлетворенность отношениями\" или \"Идеальный партнер\"."
+            "Пройдите один из опросов: \"Удовлетворенность отношениями\" или \"Идеальный партнер\"."
         )
 
     satisfaction = user_data.get('satisfaction_result')
     ideal = user_data.get('ideal_traits')
 
-    text = "Вы прошли следующие опросы:\n"
+    text = "📝 Вы прошли следующие опросы:\n"
 
     if satisfaction and ideal:
         # Оба результата есть
         text += (
             "\n<b>Удовлетворенность отношениями и Идеальный партнер</b>\n\n"
-            "<b>Удовлетворенность отношениями:</b>\n"
+            "❤️ Удовлетворенность отношениями:\n"
             f"<blockquote expandable>{satisfaction}</blockquote>\n\n"
-            "<b>Идеальный партнер:</b>\n"
+            "❤️ Идеальный партнер:\n"
             f"<blockquote expandable>{ideal}</blockquote>"
         )
     elif satisfaction:
         # Только удовлетворенность
         text += (
-            "\n<b>Удовлетворенность отношениями</b>\n"
+            "\n❤️ Удовлетворенность отношениями\n"
             f"<blockquote expandable>{satisfaction}</blockquote>"
         )
     elif ideal:
         # Только идеальный партнер
         text += (
-            "\n<b>Идеальный партнер</b>\n"
+            "\n❤️ Идеальный партнер\n"
             f"<blockquote expandable>{ideal}</blockquote>"
         )
     else:
         text = (
             "У вас пока нет сохраненных результатов опросов.\n"
-            "Пройдите хотя бы один опрос."
+            "Пройдите один из опросов: \"Удовлетворенность отношениями\" или \"Идеальный партнер\"."
         )
 
     return text
